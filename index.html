@@ -63,7 +63,7 @@ input{
 
 <div class="option">
   <label><input type="checkbox" id="manualChk"> 取扱説明書</label><br>
-  <label><input type="checkbox" id="specChk" checked> 仕様書</label>
+  <label><input type="checkbox" id="specChk"> 仕様書</label>
 </div>
 
 <button class="btn search" onclick="search()">🔍 検索</button>
@@ -78,7 +78,7 @@ const isIOS = ua.includes("iphone") || ua.includes("ipad");
 
 let lastText = "";
 
-// ✅ Androidだけ自動化
+// ✅ Androidのみ自動化（安全版）
 if(isAndroid){
   setInterval(async ()=>{
     try{
@@ -89,7 +89,8 @@ if(isAndroid){
 
       const clean = text.trim();
 
-      if(clean === lastText || clean.length < 3) return;
+      if(clean.length < 3) return;
+      if(clean === lastText) return;
 
       lastText = clean;
 
@@ -103,7 +104,7 @@ if(isAndroid){
 }
 
 
-// 🔥レンズ（履歴残さない）
+// 🔥Googleレンズ（履歴残さない）
 function openLens(){
 
   if(isAndroid){
@@ -140,14 +141,14 @@ function search(){
 }
 
 
-// 自動検索
+// 🔍自動検索
 function autoSearch(keyword){
   if(!keyword) return;
   runSearch(keyword);
 }
 
 
-// 検索処理
+// 🔍検索処理（バグ対策済）
 function runSearch(keyword){
 
   const manual = document.getElementById("manualChk").checked;
@@ -161,6 +162,8 @@ function runSearch(keyword){
     option = '"取扱説明書"';
   }else if(spec){
     option = '"仕様書"';
+  }else{
+    option = ""; // ← チェックなし対応
   }
 
   const q = encodeURIComponent(
@@ -171,14 +174,14 @@ function runSearch(keyword){
 }
 
 
-// 🔥戻ってきた時の最適化（これが重要）
+// 🔥戻ってきた時の最適化
 window.addEventListener("pageshow", ()=>{
   const input = document.getElementById("modelInput");
 
-  // フォーカス戻す
+  if(!input) return;
+
   input.focus();
 
-  // カーソル最後
   const len = input.value.length;
   input.setSelectionRange(len, len);
 });
