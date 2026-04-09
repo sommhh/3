@@ -41,11 +41,13 @@ input{
   color:#fff;
   font-weight:bold;
   font-size:16px;
-  cursor:pointer;
 }
 .lens{background:#000;}
-.manual{background:#4285f4;}
-.spec{background:#34a853;}
+.search{background:#4285f4;}
+.option{
+  text-align:left;
+  margin:10px 0;
+}
 </style>
 </head>
 
@@ -57,87 +59,100 @@ input{
 
 <button class="btn lens" onclick="openLens()">📷 Googleレンズ</button>
 
-<input id="modelInput" placeholder="型番を入力 or ペースト">
+<input id="modelInput" placeholder="型番を入力（長押しペーストOK）">
 
-<button class="btn manual" onclick="pasteAndSearch()">📋 貼り付け検索</button>
-<button class="btn manual" onclick="searchNow('取扱説明書')">📖 取説</button>
-<button class="btn spec" onclick="searchNow('仕様書')">📑 仕様書</button>
+<div class="option">
+  <label><input type="checkbox" id="manualChk"> 取扱説明書</label><br>
+  <label><input type="checkbox" id="specChk" checked> 仕様書</label>
+</div>
+
+<button class="btn search" onclick="search()">🔍 検索</button>
 
 </div>
 
 <script>
 
-// ✅ Googleレンズ起動（安定版）
-function openLens(){
-  const ua = navigator.userAgent.toLowerCase();
+const ua = navigator.userAgent.toLowerCase();
+const isAndroid = ua.includes("android");
+const isIOS = ua.includes("iphone") || ua.includes("ipad");
 
-  if(ua.includes("android")){
-    // Android → アプリ起動
+let lastText = "";
+
+// ✅ Androidだけ自動監視ON
+if(isAndroid){
+  setInterval(async ()=>{
+    try{
+      if(!navigator.clipboard) return;
+
+      const text = await navigator.clipboard.readText();
+
+      if(!text) return;
+
+      const clean = text.trim();
+
+      // 同じ内容・短すぎは無視
+      if(clean === lastText || clean.length < 3) return;
+
+      lastText = clean;
+
+      document.getElementById("modelInput").value = clean;
+
+      // 🔥 自動検索
+      autoSearch(clean);
+
+    }catch(e){}
+  }, 1500); // 負荷軽減
+}
+
+
+// レンズ
+function openLens(){
+  if(isAndroid){
     location.href = "intent://lens.google.com/#Intent;scheme=https;package=com.google.ar.lens;end";
   }else{
-    // iPhone → Web版レンズ（確実動作）
     location.href = "https://lens.google.com/";
   }
 }
 
 
-// ✅ クリップボード → 貼り付け＋検索（ユーザー操作必須）
-async function pasteAndSearch(){
-  try{
-    if(!navigator.clipboard){
-      alert("この端末はペーストAPI非対応です");
-      return;
-    }
-
-    const text = await navigator.clipboard.readText();
-
-    if(!text){
-      alert("コピーされていません");
-      return;
-    }
-
-    const clean = text.trim();
-
-    document.getElementById("modelInput").value = clean;
-
-    autoSearch(clean);
-
-  }catch(e){
-    // iPhoneの制限対策
-    alert("長押ししてペーストしてください");
-  }
-}
-
-
-// ✅ 自動検索（安全処理付き）
-function autoSearch(keyword){
-  if(!keyword) return;
-
-  const clean = keyword.trim();
-
-  if(clean.length < 2) return; // 誤爆防止
-
-  const q = encodeURIComponent(
-    `${clean} ("仕様書" OR "取扱説明書") filetype:pdf -amazon -楽天`
-  );
-
-  location.href = `https://www.google.com/search?q=${q}`;
-}
-
-
-// ✅ 手動検索
-function searchNow(type){
-  const input = document.getElementById("modelInput");
-  const keyword = input.value.trim();
+// 検索
+function search(){
+  const keyword = document.getElementById("modelInput").value.trim();
 
   if(!keyword){
     alert("型番を入力してください");
-    input.focus();
     return;
   }
 
+  runSearch(keyword);
+}
+
+
+// 自動検索共通処理
+function autoSearch(keyword){
+  if(!keyword) return;
+  runSearch(keyword);
+}
+
+
+// 実検索ロジック
+function runSearch(keyword){
+
+  const manual = document.getElementById("manualChk").checked;
+  const spec = document.getElementById("specChk").checked;
+
+  let option = "";
+
+  if(manual && spec){
+    option = '("仕様書" OR "取扱説明書")';
+  }else if(manual){
+    option = '"取扱説明書"';
+  }else if(spec){
+    option = '"仕様書"';
+  }
+
   const q = encodeURIComponent(
-    `${keyword} "${type}" filetype:pdf -amazon -楽天`
+    `${keyword} ${option} filetype:pdf -amazon -楽天`
   );
 
   location.href = `https://www.google.com/search?q=${q}`;
