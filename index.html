@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>型番爆速検索</title>
+<title>型番検索</title>
 
 <style>
 body{
@@ -78,7 +78,7 @@ const isIOS = ua.includes("iphone") || ua.includes("ipad");
 
 let lastText = "";
 
-// ✅ Androidのみ自動化（安全版）
+// ✅ Android 自動化（安定版）
 if(isAndroid){
   setInterval(async ()=>{
     try{
@@ -94,17 +94,16 @@ if(isAndroid){
 
       lastText = clean;
 
-      const input = document.getElementById("modelInput");
-      input.value = clean;
+      document.getElementById("modelInput").value = clean;
 
-      autoSearch(clean);
+      runSearch(clean);
 
     }catch(e){}
   },1500);
 }
 
 
-// 🔥Googleレンズ（履歴残さない）
+// 🔥レンズ起動（最終安定版）
 function openLens(){
 
   if(isAndroid){
@@ -113,11 +112,23 @@ function openLens(){
   }
 
   if(isIOS){
-    location.href = "googleapp://lens?entrypoint=camera";
 
-    setTimeout(()=>{
+    // iframe方式（成功率高）
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none";
+    iframe.src = "googleapp://lens?entrypoint=camera";
+    document.body.appendChild(iframe);
+
+    // アプリ無い場合だけフォールバック
+    const t = setTimeout(()=>{
+      document.body.removeChild(iframe);
       location.replace("https://lens.google.com/");
-    },700);
+    },1200);
+
+    // 戻ってきた時に履歴汚さない
+    window.addEventListener("pagehide", ()=>{
+      clearTimeout(t);
+    });
 
     return;
   }
@@ -141,14 +152,7 @@ function search(){
 }
 
 
-// 🔍自動検索
-function autoSearch(keyword){
-  if(!keyword) return;
-  runSearch(keyword);
-}
-
-
-// 🔍検索処理（バグ対策済）
+// 🔍検索処理（完全版）
 function runSearch(keyword){
 
   const manual = document.getElementById("manualChk").checked;
@@ -162,22 +166,17 @@ function runSearch(keyword){
     option = '"取扱説明書"';
   }else if(spec){
     option = '"仕様書"';
-  }else{
-    option = ""; // ← チェックなし対応
   }
 
-  const q = encodeURIComponent(
-    `${keyword} ${option} filetype:pdf -amazon -楽天`
-  );
+  const q = encodeURIComponent(`${keyword} ${option}`);
 
   location.href = `https://www.google.com/search?q=${q}`;
 }
 
 
-// 🔥戻ってきた時の最適化
+// 🔥戻り最適化
 window.addEventListener("pageshow", ()=>{
   const input = document.getElementById("modelInput");
-
   if(!input) return;
 
   input.focus();
