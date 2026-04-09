@@ -78,40 +78,53 @@ const isIOS = ua.includes("iphone") || ua.includes("ipad");
 
 let lastText = "";
 
-// ✅ Androidだけ自動監視ON
+// ✅ Androidだけ自動化
 if(isAndroid){
   setInterval(async ()=>{
     try{
       if(!navigator.clipboard) return;
 
       const text = await navigator.clipboard.readText();
-
       if(!text) return;
 
       const clean = text.trim();
 
-      // 同じ内容・短すぎは無視
       if(clean === lastText || clean.length < 3) return;
 
       lastText = clean;
 
       document.getElementById("modelInput").value = clean;
 
-      // 🔥 自動検索
       autoSearch(clean);
 
     }catch(e){}
-  }, 1500); // 負荷軽減
+  },1500);
 }
 
 
-// レンズ
+// 🔥レンズ起動（完全版）
 function openLens(){
+
   if(isAndroid){
+    // Android → アプリ起動
     location.href = "intent://lens.google.com/#Intent;scheme=https;package=com.google.ar.lens;end";
-  }else{
-    location.href = "https://lens.google.com/";
+    return;
   }
+
+  if(isIOS){
+    // iPhone → Googleアプリ経由でレンズ起動
+    location.href = "googleapp://lens";
+    
+    // フォールバック（アプリ無い場合）
+    setTimeout(()=>{
+      location.href = "https://lens.google.com/";
+    },800);
+
+    return;
+  }
+
+  // その他
+  location.href = "https://lens.google.com/";
 }
 
 
@@ -128,14 +141,14 @@ function search(){
 }
 
 
-// 自動検索共通処理
+// 自動検索
 function autoSearch(keyword){
   if(!keyword) return;
   runSearch(keyword);
 }
 
 
-// 実検索ロジック
+// 検索ロジック
 function runSearch(keyword){
 
   const manual = document.getElementById("manualChk").checked;
