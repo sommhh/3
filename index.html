@@ -2,18 +2,17 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>型番検索</title>
 
 <style>
-*{
-  box-sizing:border-box;
-}
+*{box-sizing:border-box;}
 
 body{
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
   background:#f8f9fa;
   margin:0;
+  -webkit-text-size-adjust:100%;
 }
 
 .container{
@@ -25,6 +24,10 @@ body{
   box-shadow:0 10px 25px rgba(0,0,0,0.1);
   text-align:center;
   margin:40px auto;
+}
+
+h2{
+  margin-top:0;
 }
 
 input{
@@ -45,14 +48,55 @@ input{
   color:#fff;
   font-weight:bold;
   font-size:16px;
+  cursor:pointer;
+}
+
+.btn:active{
+  transform:scale(0.98);
 }
 
 .lens{background:#000;}
 .search{background:#4285f4;}
 
 .option{
-  text-align:left;
   margin:10px 0;
+}
+
+/* ✅ ズレ完全防止 */
+.check-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:6px 0;
+}
+
+.check-row input[type="checkbox"]{
+  width:18px;
+  height:18px;
+  margin:0;
+  flex-shrink:0;
+
+  transform:none !important;
+  scale:1 !important;
+
+  appearance:auto;
+  -webkit-appearance:checkbox;
+}
+
+.check-row label{
+  font-size:16px;
+  line-height:1.4;
+}
+
+/* iPhone入力ズレ防止 */
+input:focus{
+  outline:none;
+  border-color:#4285f4;
+}
+
+/* スクロールバグ防止 */
+html,body{
+  overscroll-behavior:none;
 }
 </style>
 </head>
@@ -65,11 +109,20 @@ input{
 
 <button class="btn lens" onclick="openLens()">📷 Googleレンズ</button>
 
-<input id="modelInput" placeholder="型番入力（長押しペースト）">
+<input id="modelInput" placeholder="型番入力（長押しペーストOK）" autocomplete="off">
 
 <div class="option">
-  <label><input type="checkbox" id="manualChk"> 取扱説明書</label><br>
-  <label><input type="checkbox" id="specChk"> 仕様書</label>
+
+  <div class="check-row">
+    <input type="checkbox" id="manualChk">
+    <label for="manualChk">取扱説明書</label>
+  </div>
+
+  <div class="check-row">
+    <input type="checkbox" id="specChk">
+    <label for="specChk">仕様書</label>
+  </div>
+
 </div>
 
 <button class="btn search" onclick="search()">🔍 検索</button>
@@ -83,10 +136,18 @@ const isAndroid = ua.includes("android");
 const isIOS = ua.includes("iphone") || ua.includes("ipad");
 
 let lastText = "";
+let polling = null;
 
-// ✅ Android 自動化（安定版）
-if(isAndroid){
-  setInterval(async ()=>{
+/* =========================
+   📋 Android 自動ペースト（安定版）
+========================= */
+function startClipboardWatcher(){
+
+  if(!isAndroid) return;
+
+  if(polling) clearInterval(polling);
+
+  polling = setInterval(async ()=>{
     try{
       if(!navigator.clipboard) return;
 
@@ -101,7 +162,10 @@ if(isAndroid){
       lastText = clean;
 
       const input = document.getElementById("modelInput");
-      if(input) input.value = clean;
+      if(input){
+        input.value = clean;
+        input.dispatchEvent(new Event("input"));
+      }
 
       runSearch(clean);
 
@@ -109,12 +173,13 @@ if(isAndroid){
   },1500);
 }
 
-
-// 🔥レンズ起動（安定版）
+/* =========================
+   📷 レンズ起動（完全安定）
+========================= */
 function openLens(){
 
   if(isAndroid){
-    location.href = "intent://lens.google.com/#Intent;scheme=https;package=com.google.ar.lens;end";
+    location.href = "intent://lens/#Intent;scheme=googlechrome;package=com.android.chrome;end";
     return;
   }
 
@@ -122,13 +187,11 @@ function openLens(){
 
     const iframe = document.createElement("iframe");
     iframe.style.display = "none";
-    iframe.src = "googleapp://lens?entrypoint=camera";
+    iframe.src = "googleapp://lens";
     document.body.appendChild(iframe);
 
     const t = setTimeout(()=>{
-      try{
-        document.body.removeChild(iframe);
-      }catch(e){}
+      try{document.body.removeChild(iframe);}catch(e){}
       location.replace("https://lens.google.com/");
     },1200);
 
@@ -142,8 +205,9 @@ function openLens(){
   location.replace("https://lens.google.com/");
 }
 
-
-// 🔍検索
+/* =========================
+   🔍 検索
+========================= */
 function search(){
   const input = document.getElementById("modelInput");
   if(!input) return;
@@ -159,8 +223,9 @@ function search(){
   runSearch(keyword);
 }
 
-
-// 🔍検索処理
+/* =========================
+   🔍 検索処理（改良版）
+========================= */
 function runSearch(keyword){
 
   const manual = document.getElementById("manualChk")?.checked;
@@ -176,13 +241,17 @@ function runSearch(keyword){
     option = '"仕様書"';
   }
 
-  const q = encodeURIComponent(`${keyword} ${option}`);
+  // 🔥 ゴミワード除去（精度UP）
+  const clean = keyword.replace(/[^\w\-\.]/g,"");
+
+  const q = encodeURIComponent(`${clean} ${option}`);
 
   location.href = `https://www.google.com/search?q=${q}`;
 }
 
-
-// 🔥戻り最適化（安全版）
+/* =========================
+   🔙 戻り時最適化
+========================= */
 window.addEventListener("pageshow", ()=>{
   const input = document.getElementById("modelInput");
   if(!input) return;
@@ -193,6 +262,13 @@ window.addEventListener("pageshow", ()=>{
     const len = input.value.length;
     input.setSelectionRange(len, len);
   }catch(e){}
+});
+
+/* =========================
+   🚀 初期化
+========================= */
+window.addEventListener("DOMContentLoaded", ()=>{
+  startClipboardWatcher();
 });
 
 </script>
