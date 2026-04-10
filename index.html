@@ -6,15 +6,16 @@
 <title>型番検索</title>
 
 <style>
+*{
+  box-sizing:border-box;
+}
+
 body{
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
   background:#f8f9fa;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
   margin:0;
 }
+
 .container{
   width:90%;
   max-width:400px;
@@ -23,7 +24,9 @@ body{
   border-radius:20px;
   box-shadow:0 10px 25px rgba(0,0,0,0.1);
   text-align:center;
+  margin:40px auto;
 }
+
 input{
   width:100%;
   padding:12px;
@@ -32,6 +35,7 @@ input{
   margin:10px 0;
   font-size:16px;
 }
+
 .btn{
   width:100%;
   padding:14px;
@@ -42,8 +46,10 @@ input{
   font-weight:bold;
   font-size:16px;
 }
+
 .lens{background:#000;}
 .search{background:#4285f4;}
+
 .option{
   text-align:left;
   margin:10px 0;
@@ -55,7 +61,7 @@ input{
 
 <div class="container">
 
-<h2>📄 型番爆速検索</h2>
+<h2>型番検索</h2>
 
 <button class="btn lens" onclick="openLens()">📷 Googleレンズ</button>
 
@@ -94,7 +100,8 @@ if(isAndroid){
 
       lastText = clean;
 
-      document.getElementById("modelInput").value = clean;
+      const input = document.getElementById("modelInput");
+      if(input) input.value = clean;
 
       runSearch(clean);
 
@@ -103,7 +110,7 @@ if(isAndroid){
 }
 
 
-// 🔥レンズ起動（最終安定版）
+// 🔥レンズ起動（安定版）
 function openLens(){
 
   if(isAndroid){
@@ -113,22 +120,21 @@ function openLens(){
 
   if(isIOS){
 
-    // iframe方式（成功率高）
     const iframe = document.createElement("iframe");
     iframe.style.display = "none";
     iframe.src = "googleapp://lens?entrypoint=camera";
     document.body.appendChild(iframe);
 
-    // アプリ無い場合だけフォールバック
     const t = setTimeout(()=>{
-      document.body.removeChild(iframe);
+      try{
+        document.body.removeChild(iframe);
+      }catch(e){}
       location.replace("https://lens.google.com/");
     },1200);
 
-    // 戻ってきた時に履歴汚さない
     window.addEventListener("pagehide", ()=>{
       clearTimeout(t);
-    });
+    },{once:true});
 
     return;
   }
@@ -140,6 +146,8 @@ function openLens(){
 // 🔍検索
 function search(){
   const input = document.getElementById("modelInput");
+  if(!input) return;
+
   const keyword = input.value.trim();
 
   if(!keyword){
@@ -152,11 +160,11 @@ function search(){
 }
 
 
-// 🔍検索処理（完全版）
+// 🔍検索処理
 function runSearch(keyword){
 
-  const manual = document.getElementById("manualChk").checked;
-  const spec = document.getElementById("specChk").checked;
+  const manual = document.getElementById("manualChk")?.checked;
+  const spec = document.getElementById("specChk")?.checked;
 
   let option = "";
 
@@ -174,15 +182,17 @@ function runSearch(keyword){
 }
 
 
-// 🔥戻り最適化
+// 🔥戻り最適化（安全版）
 window.addEventListener("pageshow", ()=>{
   const input = document.getElementById("modelInput");
   if(!input) return;
 
   input.focus();
 
-  const len = input.value.length;
-  input.setSelectionRange(len, len);
+  try{
+    const len = input.value.length;
+    input.setSelectionRange(len, len);
+  }catch(e){}
 });
 
 </script>
