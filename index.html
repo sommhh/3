@@ -2,40 +2,43 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<!-- viewport-fit=cover を残すことで、モバイルでの表示崩れを防ぎます -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<!-- viewport-fit=cover を残し、モバイルでの表示崩れを防ぎます -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>型番検索</title>
 <style>
-/* CSSは機能的な変更はないため維持します */
-*{box-sizing:border-box;}
-body{
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
+/* =========================
+   ✅ CSS（見た目）の維持・改善
+========================= */
+* { box-sizing: border-box; }
+body {
+  font-family:-apple-system, BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,Cantarell,"Open Sans","Helvetica Neue",sans-serif;
   background:#f8f9fa;
   margin:0;
-  -webkit-text-size-adjust:100%;
+  padding:0; /* paddingを加え、端の隙間をなくす */
 }
-.container{
+.container {
   width:90%;
-  max-width:400px;
+  max-width:420px; /* 少し幅を広げて視認性向上 */
   background:#fff;
-  padding:20px;
-  border-radius:20px;
-  box-shadow:0 10px 25px rgba(0,0,0,0.1);
+  padding:30px 25px; /* パディング調整 */
+  border-radius:18px;
+  box-shadow:0 6px 20px rgba(0,0,0,0.08); /* シャドウを少し柔らかく */
   text-align:center;
-  margin:40px auto;
+  margin:30px auto;
 }
-h2{
+h2 {
   margin-top:0;
+  color:#333;
 }
-input{
+input[type="text"] {
   width:100%;
-  padding:12px;
-  border-radius:10px;
-  border:1px solid #ccc;
-  margin:10px 0;
-  font-size:16px;
+  padding:14px; /* パディングを大きく */
+  border-radius:12px;
+  border:1px solid #ddd;
+  margin:15px 0;
+  font-size:18px;
 }
-.btn{
+button.btn {
   width:100%;
   padding:14px;
   margin:6px 0;
@@ -43,17 +46,43 @@ input{
   border-radius:12px;
   color:#fff;
   font-weight:bold;
-  font-size:16px;
+  font-size:18px;
   cursor:pointer;
+  transition: background-color 0.1s; /* ホバー時のアニメーション追加 */
 }
-.btn:active{
+button.btn:active {
   transform:scale(0.98);
 }
-.lens{background:#000;}
-.search{background:#4285f4;}
+
+/* 色の定義 */
+.lens { background:#4285f4; } /* Googleの色に統一し、視認性向上 */
+.search { background:#34a853; } /* 緑系で検索を強調 */
+
 .option{
   margin:10px 0;
 }
-/* ✅ ズレ完全防止 */
-.check-row{
-  display:flex
+/* チェックボックス部分のレイアウト調整 */
+.check-row {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  text-align:left;
+  padding:8px 0;
+  border-bottom:1px solid #eee;
+}
+.checkbox-label {
+    font-size:16px;
+    color:#333;
+}
+
+/* アラートメッセージのスタイル */
+#messageArea {
+    margin-top:20px;
+    padding:10px;
+    border-radius:8px;
+    background-color: #fffbe6; /* 薄い黄色 */
+    color: #7c6319; /* 茶色っぽいテキスト */
+}
+
+</style>
+</head>
