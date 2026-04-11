@@ -1,107 +1,136 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<!-- 最も基本的なViewport設定のみに絞り込みました -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>型番検索</title>
-<style>
-/* =========================
-   ✅ 最小限のCSSによるレンダリング保証
-========================= */
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  font-family: Arial, sans-serif; /* 最も普遍的なフォントに変更 */
-  background: #f8f9fa;
-  margin: 0;
-}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📸 Lens連携型番認識システム - 全フローシミュレーション</title>
+    <style>
+        /* =========================
+           🎨 ベーススタイル
+        ========================= */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f4f8; 
+            padding: 20px;
+            text-align: center;
+        }
 
-.container {
-  width: 95%;
-  max-width: 420px;
-  background: #fff;
-  padding: 30px 20px; /* パディングを調整 */
-  border-radius: 15px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.05); /* シャドウも控えめに */
-  text-align: center;
-  margin: 20px auto; /* 上下のマージンを調整 */
-}
+        .container {
+            width: 95%;
+            max-width: 650px;
+            background: #fff;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
 
-h2 {
-  color: #333;
-}
+        h2 {
+            color: #1a73e8;
+            margin-bottom: 40px;
+        }
 
-/* InputとButtonに最もシンプルなスタイルを適用します */
-input[type="text"] {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 15px;
-    border: 1px solid #ccc;
-    border-radius: 8px; /* 角丸を少し控えめに */
-    font-size: 16px;
-}
+        /* =========================
+           📷 フェーズ1：スキャン待機エリア（初期表示）
+        ========================= */
+        #scanInitialArea {
+            padding: 50px 20px;
+            border: 3px dashed #ccc;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
 
-button.btn {
-  width: 100%;
-  padding: 14px;
-  margin: 6px 0;
-  border: none;
-  border-radius: 8px;
-  color: #fff;
-  font-weight: bold;
-  font-size: 16px;
-  cursor: pointer;
-}
+        #btnScan {
+            background: linear-gradient(90deg, #34a853 0%, #2d7c3e 100%); /* 緑グラデーションで強調 */
+            color: white;
+            padding: 18px 40px;
+            font-size: 1.3em;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        #btnScan:hover {
+             transform: scale(1.05);
+             box-shadow: 0 8px 20px rgba(52, 168, 83, 0.4);
+        }
 
-/* 色の定義を再設定 */
-.lens { background: #4285f4; }
-.search { background: #34a853; }
+        /* =========================
+           ⚙️ フェーズ2：スキャン処理シミュレーション（非表示）
+        ========================= */
+        #scanProcessingArea {
+            display: none; /* 初期は非表示 */
+            padding: 50px 20px;
+            background-color: #e3f2fd; /* 青系の背景でシステム画面を表現 */
+            border-radius: 16px;
+        }
 
-.option{
-  margin: 10px 0;
-}
+        .viewfinder {
+            width: 90%;
+            max-width: 350px;
+            height: 280px;
+            background-color: #1a1a1a; /* カメラ画面の色 */
+            border: 4px solid #333;
+            margin: 20px auto;
+            position: relative;
+            overflow: hidden;
+        }
 
-/* チェックボックス部分（今回はシンプルに表示のみ）*/
-.check-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid #eee;
-}
-</style>
-</head>
-<body>
+        .viewfinder::after {
+             content: '';
+             position: absolute;
+             top: 50%;
+             left: 10%;
+             width: 80%;
+             height: 3px;
+             background-color: rgba(255, 255, 255, 0.7);
+             transform: translateY(-50%);
+             box-shadow: 0 0 10px #ffeb3b; /* スキャン光を表現 */
+        }
 
-<div class="container">
-    <h2>型番検索システム</h2>
+        #scanStatus {
+            margin-top: 15px;
+            font-size: 1.2em;
+            color: #1a73e8;
+        }
 
-    <!-- 入力フィールド -->
-    <input type="text" id="productNumberInput" placeholder="商品型番を入力してください (例: ABC-1234)">
+        /* =========================
+           💡 フェーズ3：結果レビューエリア（前回の最適化版）
+        ========================= */
+        #ocrResultBox {
+            background: #fffbe6; 
+            border: 2px solid #fbc02d;
+            padding: 30px 20px;
+            margin-bottom: 40px;
+            text-align: center;
+            border-radius: 12px;
+        }
 
-    <!-- 検索ボタン -->
-    <button class="btn lens" onclick="searchProduct()">Googleで検索</button>
+        .result-header {
+            color: #e67e22;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+        }
 
-    <!-- オプションの表示（今回は動作しないが、レイアウト維持のため残します） -->
-    <div class="option">
-        <div class="check-row">
-            <label class="checkbox-label"><input type="checkbox" id="chk1" checked disabled> 必須オプション</label>
-            <span>〇</span>
-        </div>
-        <div class="check-row">
-            <label class="checkbox-label"><input type="checkbox" id="chk2" checked disabled> 追加保証サービス</label>
-            <span>△</span>
-        </div>
-    </div>
+        #extractedText {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 2.2em;
+            font-weight: 900;
+            color: #cc4d00;
+            display: block;
+            padding: 15px 10px;
+            background-color: #ffffff;
+            border: 2px dashed #ccc;
+            cursor: pointer;
+            user-select: text;
+            margin-top: 20px;
+        }
 
-    <!-- リンクボタン（深層リンクを回避した汎用的なURL） -->
-    <button class="btn search" onclick="openLens()">製品情報ページへ移動</button>
-    
-</div>
-
-
-<script>
-/**
- * @description 1. 商品検索処理 (最も安定性が高い機能)
- */
-function searchProduct
+        /* =========================
+           🚀 ボタン群のスタイル（変更なし）
+        ========================= */
+        .button-group {
+            display: flex;
+            gap: 15px;
