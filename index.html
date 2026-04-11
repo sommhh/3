@@ -2,19 +2,18 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<!-- viewport-fit=cover を残すことで、モバイルでの表示崩れを防ぎます -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>型番検索</title>
-
 <style>
+/* CSSは機能的な変更はないため維持します */
 *{box-sizing:border-box;}
-
 body{
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
   background:#f8f9fa;
   margin:0;
   -webkit-text-size-adjust:100%;
 }
-
 .container{
   width:90%;
   max-width:400px;
@@ -25,11 +24,9 @@ body{
   text-align:center;
   margin:40px auto;
 }
-
 h2{
   margin-top:0;
 }
-
 input{
   width:100%;
   padding:12px;
@@ -38,7 +35,6 @@ input{
   margin:10px 0;
   font-size:16px;
 }
-
 .btn{
   width:100%;
   padding:14px;
@@ -50,228 +46,14 @@ input{
   font-size:16px;
   cursor:pointer;
 }
-
 .btn:active{
   transform:scale(0.98);
 }
-
 .lens{background:#000;}
 .search{background:#4285f4;}
-
 .option{
   margin:10px 0;
 }
-
 /* ✅ ズレ完全防止 */
 .check-row{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  margin:6px 0;
-}
-
-.check-row input[type="checkbox"]{
-  width:18px;
-  height:18px;
-  margin:0;
-  flex-shrink:0;
-
-  transform:none !important;
-  scale:1 !important;
-
-  appearance:auto;
-  -webkit-appearance:checkbox;
-}
-
-.check-row label{
-  font-size:16px;
-  line-height:1.4;
-}
-
-/* iPhone入力ズレ防止 */
-input:focus{
-  outline:none;
-  border-color:#4285f4;
-}
-
-/* スクロールバグ防止 */
-html,body{
-  overscroll-behavior:none;
-}
-</style>
-</head>
-
-<body>
-
-<div class="container">
-
-<h2>型番検索</h2>
-
-<button class="btn lens" onclick="openLens()">📷 Googleレンズ</button>
-
-<input id="modelInput" placeholder="型番入力（長押しペーストOK）" autocomplete="off">
-
-<div class="option">
-
-  <div class="check-row">
-    <input type="checkbox" id="manualChk">
-    <label for="manualChk">取扱説明書</label>
-  </div>
-
-  <div class="check-row">
-    <input type="checkbox" id="specChk">
-    <label for="specChk">仕様書</label>
-  </div>
-
-</div>
-
-<button class="btn search" onclick="search()">🔍 検索</button>
-
-</div>
-
-<script>
-
-const ua = navigator.userAgent.toLowerCase();
-const isAndroid = ua.includes("android");
-const isIOS = ua.includes("iphone") || ua.includes("ipad");
-
-let lastText = "";
-let polling = null;
-
-/* =========================
-   📋 Android 自動ペースト（安定版）
-========================= */
-function startClipboardWatcher(){
-
-  if(!isAndroid) return;
-
-  if(polling) clearInterval(polling);
-
-  polling = setInterval(async ()=>{
-    try{
-      if(!navigator.clipboard) return;
-
-      const text = await navigator.clipboard.readText();
-      if(!text) return;
-
-      const clean = text.trim();
-
-      if(clean.length < 3) return;
-      if(clean === lastText) return;
-
-      lastText = clean;
-
-      const input = document.getElementById("modelInput");
-      if(input){
-        input.value = clean;
-        input.dispatchEvent(new Event("input"));
-      }
-
-      runSearch(clean);
-
-    }catch(e){}
-  },1500);
-}
-
-/* =========================
-   📷 レンズ起動（完全安定）
-========================= */
-function openLens(){
-
-  if(isAndroid){
-    location.href = "intent://lens/#Intent;scheme=googlechrome;package=com.android.chrome;end";
-    return;
-  }
-
-  if(isIOS){
-
-    const iframe = document.createElement("iframe");
-    iframe.style.display = "none";
-    iframe.src = "googleapp://lens";
-    document.body.appendChild(iframe);
-
-    const t = setTimeout(()=>{
-      try{document.body.removeChild(iframe);}catch(e){}
-      location.replace("https://lens.google.com/");
-    },1200);
-
-    window.addEventListener("pagehide", ()=>{
-      clearTimeout(t);
-    },{once:true});
-
-    return;
-  }
-
-  location.replace("https://lens.google.com/");
-}
-
-/* =========================
-   🔍 検索
-========================= */
-function search(){
-  const input = document.getElementById("modelInput");
-  if(!input) return;
-
-  const keyword = input.value.trim();
-
-  if(!keyword){
-    alert("型番を入力してください");
-    input.focus();
-    return;
-  }
-
-  runSearch(keyword);
-}
-
-/* =========================
-   🔍 検索処理（改良版）
-========================= */
-function runSearch(keyword){
-
-  const manual = document.getElementById("manualChk")?.checked;
-  const spec = document.getElementById("specChk")?.checked;
-
-  let option = "";
-
-  if(manual && spec){
-    option = '("仕様書" OR "取扱説明書")';
-  }else if(manual){
-    option = '"取扱説明書"';
-  }else if(spec){
-    option = '"仕様書"';
-  }
-
-  // 🔥 ゴミワード除去（精度UP）
-  const clean = keyword.replace(/[^\w\-\.]/g,"");
-
-  const q = encodeURIComponent(`${clean} ${option}`);
-
-  location.href = `https://www.google.com/search?q=${q}`;
-}
-
-/* =========================
-   🔙 戻り時最適化
-========================= */
-window.addEventListener("pageshow", ()=>{
-  const input = document.getElementById("modelInput");
-  if(!input) return;
-
-  input.focus();
-
-  try{
-    const len = input.value.length;
-    input.setSelectionRange(len, len);
-  }catch(e){}
-});
-
-/* =========================
-   🚀 初期化
-========================= */
-window.addEventListener("DOMContentLoaded", ()=>{
-  startClipboardWatcher();
-});
-
-</script>
-
-</body>
-</html>
+  display:flex
