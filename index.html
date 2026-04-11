@@ -1,136 +1,196 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📸 Lens連携型番認識システム - 全フローシミュレーション</title>
-    <style>
-        /* =========================
-           🎨 ベーススタイル
-        ========================= */
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f0f4f8; 
-            padding: 20px;
-            text-align: center;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📸 Lens連携型番認識システム</title>
 
-        .container {
-            width: 95%;
-            max-width: 650px;
-            background: #fff;
-            padding: 30px;
-            border-radius: 16px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-        }
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-        h2 {
-            color: #1a73e8;
-            margin-bottom: 40px;
-        }
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #f0f4f8;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+}
 
-        /* =========================
-           📷 フェーズ1：スキャン待機エリア（初期表示）
-        ========================= */
-        #scanInitialArea {
-            padding: 50px 20px;
-            border: 3px dashed #ccc;
-            border-radius: 16px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+.container {
+    width: 95%;
+    max-width: 650px;
+    background: #fff;
+    padding: 30px;
+    border-radius: 16px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    text-align: center;
+}
 
-        #btnScan {
-            background: linear-gradient(90deg, #34a853 0%, #2d7c3e 100%); /* 緑グラデーションで強調 */
-            color: white;
-            padding: 18px 40px;
-            font-size: 1.3em;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        #btnScan:hover {
-             transform: scale(1.05);
-             box-shadow: 0 8px 20px rgba(52, 168, 83, 0.4);
-        }
+h2 {
+    color: #1a73e8;
+    margin-bottom: 30px;
+}
 
-        /* =========================
-           ⚙️ フェーズ2：スキャン処理シミュレーション（非表示）
-        ========================= */
-        #scanProcessingArea {
-            display: none; /* 初期は非表示 */
-            padding: 50px 20px;
-            background-color: #e3f2fd; /* 青系の背景でシステム画面を表現 */
-            border-radius: 16px;
-        }
+/* 初期 */
+#scanInitialArea {
+    padding: 50px 20px;
+    border: 3px dashed #ccc;
+    border-radius: 16px;
+}
 
-        .viewfinder {
-            width: 90%;
-            max-width: 350px;
-            height: 280px;
-            background-color: #1a1a1a; /* カメラ画面の色 */
-            border: 4px solid #333;
-            margin: 20px auto;
-            position: relative;
-            overflow: hidden;
-        }
+#btnScan {
+    background: linear-gradient(90deg, #34a853, #2d7c3e);
+    color: white;
+    padding: 18px 40px;
+    font-size: 1.2em;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+}
 
-        .viewfinder::after {
-             content: '';
-             position: absolute;
-             top: 50%;
-             left: 10%;
-             width: 80%;
-             height: 3px;
-             background-color: rgba(255, 255, 255, 0.7);
-             transform: translateY(-50%);
-             box-shadow: 0 0 10px #ffeb3b; /* スキャン光を表現 */
-        }
+#btnScan:hover {
+    transform: scale(1.05);
+}
 
-        #scanStatus {
-            margin-top: 15px;
-            font-size: 1.2em;
-            color: #1a73e8;
-        }
+/* スキャン中 */
+#scanProcessingArea {
+    display: none;
+    padding: 30px;
+    background: #e3f2fd;
+    border-radius: 16px;
+}
 
-        /* =========================
-           💡 フェーズ3：結果レビューエリア（前回の最適化版）
-        ========================= */
-        #ocrResultBox {
-            background: #fffbe6; 
-            border: 2px solid #fbc02d;
-            padding: 30px 20px;
-            margin-bottom: 40px;
-            text-align: center;
-            border-radius: 12px;
-        }
+.viewfinder {
+    width: 100%;
+    max-width: 320px;
+    height: 240px;
+    background: #111;
+    margin: 20px auto;
+    position: relative;
+}
 
-        .result-header {
-            color: #e67e22;
-            font-size: 1.1em;
-            margin-bottom: 15px;
-        }
+.viewfinder::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 10%;
+    width: 80%;
+    height: 3px;
+    background: #fff;
+    box-shadow: 0 0 10px yellow;
+}
 
-        #extractedText {
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 2.2em;
-            font-weight: 900;
-            color: #cc4d00;
-            display: block;
-            padding: 15px 10px;
-            background-color: #ffffff;
-            border: 2px dashed #ccc;
-            cursor: pointer;
-            user-select: text;
-            margin-top: 20px;
-        }
+/* 結果 */
+#resultArea {
+    display: none;
+}
 
-        /* =========================
-           🚀 ボタン群のスタイル（変更なし）
-        ========================= */
-        .button-group {
-            display: flex;
-            gap: 15px;
+#ocrResultBox {
+    background: #fffbe6;
+    border: 2px solid #fbc02d;
+    padding: 20px;
+    border-radius: 12px;
+}
+
+#extractedText {
+    font-family: monospace;
+    font-size: 2em;
+    font-weight: bold;
+    margin-top: 15px;
+    padding: 10px;
+    border: 2px dashed #ccc;
+    cursor: pointer;
+}
+
+/* ボタン */
+.button-group {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 20px;
+}
+
+button.action {
+    padding: 12px 18px;
+    border: none;
+    border-radius: 8px;
+    background: #1a73e8;
+    color: white;
+    cursor: pointer;
+}
+
+button.action:hover {
+    opacity: 0.8;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>📸 型番スキャン</h2>
+
+<!-- 初期 -->
+<div id="scanInitialArea">
+    <button id="btnScan">📷 スキャン開始</button>
+</div>
+
+<!-- スキャン中 -->
+<div id="scanProcessingArea">
+    <div class="viewfinder"></div>
+    <p id="scanStatus">読み取り中...</p>
+</div>
+
+<!-- 結果 -->
+<div id="resultArea">
+    <div id="ocrResultBox">
+        <div>認識結果</div>
+        <div id="extractedText">VVF2.0-3C</div>
+    </div>
+
+    <div class="button-group">
+        <button class="action" onclick="copyText()">コピー</button>
+        <button class="action" onclick="searchGoogle()">検索</button>
+        <button class="action" onclick="reset()">やり直し</button>
+    </div>
+</div>
+
+</div>
+
+<script>
+const btnScan = document.getElementById('btnScan');
+const initial = document.getElementById('scanInitialArea');
+const processing = document.getElementById('scanProcessingArea');
+const result = document.getElementById('resultArea');
+const text = document.getElementById('extractedText');
+
+btnScan.onclick = () => {
+    initial.style.display = "none";
+    processing.style.display = "block";
+
+    setTimeout(() => {
+        processing.style.display = "none";
+        result.style.display = "block";
+    }, 2000);
+};
+
+function copyText(){
+    navigator.clipboard.writeText(text.innerText);
+    alert("コピーしました");
+}
+
+function searchGoogle(){
+    const q = text.innerText;
+    window.open("https://www.google.com/search?q=" + encodeURIComponent(q));
+}
+
+function reset(){
+    result.style.display = "none";
+    initial.style.display = "block";
+}
+</script>
+
+</body>
+</html>
