@@ -2,87 +2,106 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<!-- viewport-fit=cover を残し、モバイルでの表示崩れを防ぎます -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<!-- 最も基本的なViewport設定のみに絞り込みました -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>型番検索</title>
 <style>
 /* =========================
-   ✅ CSS（見た目）の維持・改善
+   ✅ 最小限のCSSによるレンダリング保証
 ========================= */
-* { box-sizing: border-box; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 body {
-  font-family:-apple-system, BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,Cantarell,"Open Sans","Helvetica Neue",sans-serif;
-  background:#f8f9fa;
-  margin:0;
-  padding:0; /* paddingを加え、端の隙間をなくす */
-}
-.container {
-  width:90%;
-  max-width:420px; /* 少し幅を広げて視認性向上 */
-  background:#fff;
-  padding:30px 25px; /* パディング調整 */
-  border-radius:18px;
-  box-shadow:0 6px 20px rgba(0,0,0,0.08); /* シャドウを少し柔らかく */
-  text-align:center;
-  margin:30px auto;
-}
-h2 {
-  margin-top:0;
-  color:#333;
-}
-input[type="text"] {
-  width:100%;
-  padding:14px; /* パディングを大きく */
-  border-radius:12px;
-  border:1px solid #ddd;
-  margin:15px 0;
-  font-size:18px;
-}
-button.btn {
-  width:100%;
-  padding:14px;
-  margin:6px 0;
-  border:none;
-  border-radius:12px;
-  color:#fff;
-  font-weight:bold;
-  font-size:18px;
-  cursor:pointer;
-  transition: background-color 0.1s; /* ホバー時のアニメーション追加 */
-}
-button.btn:active {
-  transform:scale(0.98);
+  font-family: Arial, sans-serif; /* 最も普遍的なフォントに変更 */
+  background: #f8f9fa;
+  margin: 0;
 }
 
-/* 色の定義 */
-.lens { background:#4285f4; } /* Googleの色に統一し、視認性向上 */
-.search { background:#34a853; } /* 緑系で検索を強調 */
+.container {
+  width: 95%;
+  max-width: 420px;
+  background: #fff;
+  padding: 30px 20px; /* パディングを調整 */
+  border-radius: 15px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05); /* シャドウも控えめに */
+  text-align: center;
+  margin: 20px auto; /* 上下のマージンを調整 */
+}
+
+h2 {
+  color: #333;
+}
+
+/* InputとButtonに最もシンプルなスタイルを適用します */
+input[type="text"] {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 8px; /* 角丸を少し控えめに */
+    font-size: 16px;
+}
+
+button.btn {
+  width: 100%;
+  padding: 14px;
+  margin: 6px 0;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: bold;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+/* 色の定義を再設定 */
+.lens { background: #4285f4; }
+.search { background: #34a853; }
 
 .option{
-  margin:10px 0;
+  margin: 10px 0;
 }
-/* チェックボックス部分のレイアウト調整 */
+
+/* チェックボックス部分（今回はシンプルに表示のみ）*/
 .check-row {
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  text-align:left;
-  padding:8px 0;
-  border-bottom:1px solid #eee;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
 }
-.checkbox-label {
-    font-size:16px;
-    color:#333;
-}
-
-/* アラートメッセージのスタイル */
-#messageArea {
-    margin-top:20px;
-    padding:10px;
-    border-radius:8px;
-    background-color: #fffbe6; /* 薄い黄色 */
-    color: #7c6319; /* 茶色っぽいテキスト */
-}
-
 </style>
 </head>
+<body>
+
+<div class="container">
+    <h2>型番検索システム</h2>
+
+    <!-- 入力フィールド -->
+    <input type="text" id="productNumberInput" placeholder="商品型番を入力してください (例: ABC-1234)">
+
+    <!-- 検索ボタン -->
+    <button class="btn lens" onclick="searchProduct()">Googleで検索</button>
+
+    <!-- オプションの表示（今回は動作しないが、レイアウト維持のため残します） -->
+    <div class="option">
+        <div class="check-row">
+            <label class="checkbox-label"><input type="checkbox" id="chk1" checked disabled> 必須オプション</label>
+            <span>〇</span>
+        </div>
+        <div class="check-row">
+            <label class="checkbox-label"><input type="checkbox" id="chk2" checked disabled> 追加保証サービス</label>
+            <span>△</span>
+        </div>
+    </div>
+
+    <!-- リンクボタン（深層リンクを回避した汎用的なURL） -->
+    <button class="btn search" onclick="openLens()">製品情報ページへ移動</button>
+    
+</div>
+
+
+<script>
+/**
+ * @description 1. 商品検索処理 (最も安定性が高い機能)
+ */
+function searchProduct
