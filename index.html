@@ -2,126 +2,88 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📸 Lens連携型番認識システム</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>型番検索</title>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
+*{box-sizing:border-box;}
 
-body {
-    font-family: 'Segoe UI', sans-serif;
-    background: #f0f4f8;
-    padding: 20px;
-    display: flex;
-    justify-content: center;
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
+  background:#f8f9fa;
+  margin:0;
 }
 
-.container {
-    width: 95%;
-    max-width: 650px;
-    background: #fff;
-    padding: 30px;
-    border-radius: 16px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-    text-align: center;
+.container{
+  width:90%;
+  max-width:420px;
+  background:#fff;
+  padding:20px;
+  border-radius:20px;
+  box-shadow:0 10px 25px rgba(0,0,0,0.1);
+  text-align:center;
+  margin:30px auto;
 }
 
-h2 {
-    color: #1a73e8;
-    margin-bottom: 30px;
+.btn{
+  width:100%;
+  padding:14px;
+  margin:6px 0;
+  border:none;
+  border-radius:12px;
+  color:#fff;
+  font-weight:bold;
+  font-size:16px;
+  cursor:pointer;
 }
 
-/* 初期 */
-#scanInitialArea {
-    padding: 50px 20px;
-    border: 3px dashed #ccc;
-    border-radius: 16px;
+.btn:disabled{
+  opacity:0.6;
+  cursor:not-allowed;
 }
 
-#btnScan {
-    background: linear-gradient(90deg, #34a853, #2d7c3e);
-    color: white;
-    padding: 18px 40px;
-    font-size: 1.2em;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
+.lens{background:#000;}
+.ocr{background:#34a853;}
+.search{background:#4285f4;}
+
+input{
+  width:100%;
+  padding:12px;
+  border-radius:10px;
+  border:1px solid #ccc;
+  margin:10px 0;
+  font-size:16px;
 }
 
-#btnScan:hover {
-    transform: scale(1.05);
+.check-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:6px 0;
 }
 
-/* スキャン中 */
-#scanProcessingArea {
-    display: none;
-    padding: 30px;
-    background: #e3f2fd;
-    border-radius: 16px;
+.check-row input{
+  width:18px;
+  height:18px;
 }
 
-.viewfinder {
-    width: 100%;
-    max-width: 320px;
-    height: 240px;
-    background: #111;
-    margin: 20px auto;
-    position: relative;
+video{
+  width:100%;
+  border-radius:12px;
+  margin-top:10px;
+  display:none;
 }
+video.active{display:block;}
 
-.viewfinder::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 10%;
-    width: 80%;
-    height: 3px;
-    background: #fff;
-    box-shadow: 0 0 10px yellow;
-}
+canvas{display:none;}
 
-/* 結果 */
-#resultArea {
-    display: none;
-}
-
-#ocrResultBox {
-    background: #fffbe6;
-    border: 2px solid #fbc02d;
-    padding: 20px;
-    border-radius: 12px;
-}
-
-#extractedText {
-    font-family: monospace;
-    font-size: 2em;
-    font-weight: bold;
-    margin-top: 15px;
-    padding: 10px;
-    border: 2px dashed #ccc;
-    cursor: pointer;
-}
-
-/* ボタン */
-.button-group {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-    flex-wrap: wrap;
-    margin-top: 20px;
-}
-
-button.action {
-    padding: 12px 18px;
-    border: none;
-    border-radius: 8px;
-    background: #1a73e8;
-    color: white;
-    cursor: pointer;
-}
-
-button.action:hover {
-    opacity: 0.8;
+.status{
+  font-size:14px;
+  color:#666;
+  margin:8px 0;
+  min-height:20px;
 }
 </style>
 </head>
@@ -130,67 +92,175 @@ button.action:hover {
 
 <div class="container">
 
-<h2>📸 型番スキャン</h2>
+<h2>型番検索</h2>
 
-<!-- 初期 -->
-<div id="scanInitialArea">
-    <button id="btnScan">📷 スキャン開始</button>
+<button class="btn lens" onclick="openLens()">📷 レンズ</button>
+<button class="btn ocr" id="ocrBtn" onclick="toggleOCR()">📸 OCRスキャン</button>
+
+<div class="status" id="status"></div>
+
+<input id="modelInput" placeholder="型番">
+
+<div class="check-row">
+  <input type="checkbox" id="manualChk">
+  <label for="manualChk">取扱説明書</label>
 </div>
 
-<!-- スキャン中 -->
-<div id="scanProcessingArea">
-    <div class="viewfinder"></div>
-    <p id="scanStatus">読み取り中...</p>
+<div class="check-row">
+  <input type="checkbox" id="specChk">
+  <label for="specChk">仕様書</label>
 </div>
 
-<!-- 結果 -->
-<div id="resultArea">
-    <div id="ocrResultBox">
-        <div>認識結果</div>
-        <div id="extractedText">VVF2.0-3C</div>
-    </div>
+<button class="btn search" onclick="search()">検索</button>
 
-    <div class="button-group">
-        <button class="action" onclick="copyText()">コピー</button>
-        <button class="action" onclick="searchGoogle()">検索</button>
-        <button class="action" onclick="reset()">やり直し</button>
-    </div>
-</div>
+<video id="video" autoplay playsinline muted></video>
+<canvas id="canvas"></canvas>
 
 </div>
 
 <script>
-const btnScan = document.getElementById('btnScan');
-const initial = document.getElementById('scanInitialArea');
-const processing = document.getElementById('scanProcessingArea');
-const result = document.getElementById('resultArea');
-const text = document.getElementById('extractedText');
+const ua = navigator.userAgent.toLowerCase();
+const isAndroid = ua.includes("android");
 
-btnScan.onclick = () => {
-    initial.style.display = "none";
-    processing.style.display = "block";
+let stream = null;
+let running = false;
+let worker = null;
+let clipboardTimer = null;
+let lastClipboard = "";
 
-    setTimeout(() => {
-        processing.style.display = "none";
-        result.style.display = "block";
-    }, 2000);
-};
-
-function copyText(){
-    navigator.clipboard.writeText(text.innerText);
-    alert("コピーしました");
+/* レンズ：iOS/Android両対応 */
+function openLens(){
+  if(isAndroid){
+    location.href = "intent://lens/#Intent;scheme=googlechrome;package=com.android.chrome;S.browser_fallback_url=https://lens.google.com/;end";
+    return;
+  }
+  
+  // iOS/PCはUniversal Link。アプリあれば自動で開く
+  location.href = "https://lens.google.com/";
 }
 
-function searchGoogle(){
-    const q = text.innerText;
-    window.open("https://www.google.com/search?q=" + encodeURIComponent(q));
+/* OCRトグル */
+async function toggleOCR(){
+  if(running){
+    stopOCR();
+  } else {
+    await startOCR();
+  }
 }
 
-function reset(){
-    result.style.display = "none";
-    initial.style.display = "block";
+/* OCR開始 */
+async function startOCR(){
+  const video = document.getElementById("video");
+  const btn = document.getElementById("ocrBtn");
+  const status = document.getElementById("status");
+  
+  try{
+    btn.disabled = true;
+    status.textContent = "カメラ起動中...";
+    
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: {facingMode: "environment"}
+    });
+    video.srcObject = stream;
+    video.classList.add("active");
+    
+    await video.play();
+    
+    // Tesseract worker初期化
+    status.textContent = "OCR準備中...";
+    worker = await Tesseract.createWorker("eng");
+    
+    running = true;
+    btn.textContent = "⏹️ スキャン停止";
+    btn.disabled = false;
+    status.textContent = "スキャン中...";
+    
+    scanLoop();
+  } catch(e){
+    status.textContent = "カメラ起動失敗: " + e.message;
+    btn.disabled = false;
+    stopOCR();
+  }
 }
-</script>
 
-</body>
-</html>
+/* スキャンループ */
+async function scanLoop(){
+  if(!running || !worker) return;
+
+  const video = document.getElementById("video");
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
+  const status = document.getElementById("status");
+
+  // videoサイズが0の時はスキップ
+  if(!video.videoWidth || !video.videoHeight){
+    setTimeout(scanLoop, 500);
+    return;
+  }
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  ctx.drawImage(video, 0, 0);
+
+  try{
+    const { data } = await worker.recognize(canvas);
+    const model = extractModel(data.text);
+
+    if(model){
+      document.getElementById("modelInput").value = model;
+      status.textContent = `検出: ${model}`;
+      stopOCR();
+      setTimeout(() => runSearch(model), 500);
+      return;
+    }
+  } catch(e){
+    console.error(e);
+  }
+
+  setTimeout(scanLoop, 1200);
+}
+
+/* 停止 */
+function stopOCR(){
+  running = false;
+  
+  if(stream){
+    stream.getTracks().forEach(t => t.stop());
+    stream = null;
+  }
+  
+  if(worker){
+    worker.terminate();
+    worker = null;
+  }
+  
+  const video = document.getElementById("video");
+  video.classList.remove("active");
+  video.srcObject = null;
+  
+  const btn = document.getElementById("ocrBtn");
+  btn.textContent = "📸 OCRスキャン";
+  btn.disabled = false;
+  
+  document.getElementById("status").textContent = "";
+}
+
+/* 型番抽出 */
+function extractModel(text){
+  const lines = text.split("\n");
+  let best = ""; 
+  let bestScore = 0;
+
+  for(const l of lines){
+    const t = l.trim().toUpperCase();
+    if(t.length < 4) continue;
+
+    if(/[A-Z0-9\-]/.test(t)){
+      let score = 0;
+      if(/[0-9]/.test(t)) score += 2;
+      if(/[A-Z]/.test(t)) score += 2;
+      if(/-/.test(t)) score += 3;
+      if(t.length >= 6) score += 2;
+      if(/^[A-Z0-9\-]+$/.test(t)) score += 3;
+
+     
