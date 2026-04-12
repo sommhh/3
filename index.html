@@ -3,146 +3,125 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>型番検索 Pro</title>
+<title>型番検索 Pro Fix</title>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
-*{box-sizing:border-box;}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;background:#f8f9fa;margin:0;}
-.container{width:90%;max-width:440px;background:#fff;padding:20px;border-radius:20px;box-shadow:0 10px 25px rgba(0,0.1);text-align:center;margin:28px auto;}
-.btn{width:100%;padding:14px;margin:6px 0;border:none;border-radius:12px;color:#fff;font-weight:bold;font-size:16px;cursor:pointer;}
-.btn:disabled{opacity:.6;cursor:not-allowed;}
-.lens{background:#000;}.ocr{background:#34a853;}.search{background:#4285f4;}.capture{background:#ff5722;}.torch{background:#555;}
-input{width:100%;padding:12px;border-radius:10px;border:1px solid #ccc;margin:10px 0;font-size:16px;}
-.check-row{display:flex;align-items:center;gap:10px;margin:6px 0;}.check-row input{width:18px;height:18px;}
-.video-wrap{position:relative;width:100%;margin-top:10px;display:none;}.video-wrap.active{display:block;}
-video{width:100%;border-radius:12px;background:#000;}
-.scan-area{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:82%;height:90px;border:2px solid #34a853;border-radius:10px;box-shadow:0 9999px rgba(0,0,.35);pointer-events:none;}
-.btn-row{display:flex;gap:8px;margin-top:8px;}
-.btn-row.capture{flex:3;}.btn-row.torch{flex:1;}
-canvas{display:none;}
-.status{font-size:14px;color:#666;margin:8px 0;min-height:20px;}
-.candidates{margin:10px 0;text-align:left;}
-.candidate{padding:11px;margin:5px 0;background:#f1f3f4;border-radius:9px;border:2px solid transparent;cursor:pointer;word-break:break-all;font-family:monospace;}
-.candidate:hover{background:#e8f0fe;}
-.candidate.selected{background:#e8f0fe;border-color:#4285f4;font-weight:bold;}
-.candidate-title{font-size:12px;color:#666;margin-bottom:6px;}
+*{box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;background:#f8f9fa;margin:0}
+.container{width:92%;max-width:440px;background:#fff;padding:18px;border-radius:18px;box-shadow:0 8px 20px rgba(0,0,0,.1);margin:24px auto}
+.btn{width:100%;padding:13px;margin:6px 0;border:none;border-radius:11px;color:#fff;font-weight:bold;font-size:16px}
+.lens{background:#000}.ocr{background:#34a853}.search{background:#4285f4}.capture{background:#ff5722}.torch{background:#555;flex:1}
+input{width:100%;padding:11px;border-radius:9px;border:1px solid #ccc;margin:8px 0;font-size:16px}
+.video-wrap{position:relative;display:none;margin-top:8px}.video-wrap.active{display:block}
+video{width:100%;border-radius:12px;background:#000}
+.scan-area{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:84%;height:92px;border:2px solid #34a853;border-radius:10px;box-shadow:0 0 0 2000px rgba(0,0,0,.35);pointer-events:none}
+.btn-row{display:flex;gap:8px;margin-top:8px}
+.status{font-size:13px;color:#555;min-height:18px;margin:6px 0}
+.candidates{text-align:left;margin:8px 0}
+.candidate{padding:10px;margin:4px 0;background:#f1f3f4;border-radius:8px;border:2px solid transparent;font-family:monospace;cursor:pointer}
+.candidate.selected{background:#e8f0fe;border-color:#4285f4}
+.debug{font-size:11px;color:#999;white-space:pre-wrap;max-height:80px;overflow:auto;background:#fafafa;padding:6px;border-radius:6px;margin-top:6px}
 </style>
 </head>
 <body>
 <div class="container">
 <h2>型番検索</h2>
-<button class="btn lens" id="lensBtn" onclick="startCamera()">📷 カメラ起動</button>
-<button class="btn ocr" id="ocrBtn" onclick="startCamera()">📸 OCRモード</button>
+<button class="btn ocr" id="startBtn" onclick="startCamera()">📸 カメラ起動</button>
 <div class="status" id="status"></div>
 <div class="video-wrap" id="videoWrap">
   <video id="video" autoplay playsinline muted></video>
   <div class="scan-area"></div>
 </div>
-<div class="btn-row" id="btnRow" style="display:none;">
-  <button class="btn capture" id="captureBtn" onclick="captureFrame()">📍 読み取る</button>
-  <button class="btn torch" id="torchBtn" onclick="toggleTorch()">💡</button>
+<div class="btn-row" id="btnRow" style="display:none">
+  <button class="btn capture" style="flex:3" onclick="captureFrame()">📍 読み取る</button>
+  <button class="btn torch" onclick="toggleTorch()">💡</button>
 </div>
-<canvas id="canvas"></canvas>
+<canvas id="canvas" style="display:none"></canvas>
 <div class="candidates" id="candidates"></div>
 <input id="modelInput" placeholder="候補をタップ or 手入力">
-<div class="check-row"><input type="checkbox" id="manualChk"><label for="manualChk">取扱説明書</label></div>
-<div class="check-row"><input type="checkbox" id="specChk"><label for="specChk">仕様書</label></div>
-<button class="btn search" onclick="search()">検索</button>
+<div><label><input type="checkbox" id="manualChk"> 取扱説明書</label> <label><input type="checkbox" id="specChk"> 仕様書</label></div>
+<button class="btn search" onclick="doSearch()">検索</button>
+<div class="debug" id="debug"></div>
 </div>
+
 <script>
-let stream=null,worker=null,running=false,torchOn=false,lastClipboard="";
+let stream=null,worker=null,running=false,torchOn=false;
 
 async function startCamera(){
-  if(running){stopCamera();return;}
-  const video=document.getElementById('video');
-  const wrap=document.getElementById('videoWrap');
-  const status=document.getElementById('status');
-  try{
-    status.textContent='カメラ起動中...';
-    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}});
-    video.srcObject=stream; wrap.classList.add('active'); await video.play();
-    running=true;
-    document.getElementById('btnRow').style.display='flex';
-    document.getElementById('lensBtn').textContent='⏹️ 停止';
-    document.getElementById('ocrBtn').textContent='⏹️ 停止';
-    status.textContent='緑枠に合わせて「読み取る」。暗い時は💡。タップでピント。';
-    video.onclick=()=>{const t=stream.getVideoTracks()[0]; if(t.getCapabilities().focusMode){t.applyConstraints({advanced:[{focusMode:'single-shot'}]});}};
-    if(!worker){
-      worker=await Tesseract.createWorker('eng',1,{logger:m=>{if(m.status==='recognizing text')status.textContent=`認識中 ${Math.round(m.progress*100)}%`;}});
-      await worker.setParameters({tessedit_pageseg_mode:'7',tessedit_char_whitelist:'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.',preserve_interword_spaces:'1',user_defined_dpi:'300'});
-    }
-  }catch(e){status.textContent='カメラ失敗: '+e.message;stopCamera();}
-}
-
-function toggleTorch(){
-  if(!stream)return; const track=stream.getVideoTracks()[0]; const cap=track.getCapabilities();
-  if(!cap.torch){alert('ライト非対応');return;}
-  torchOn=!torchOn; track.applyConstraints({advanced:[{torch:torchOn}]}); document.getElementById('torchBtn').style.background=torchOn?'#ff9800':'#555';
+ if(running){stopCamera();return}
+ const v=document.getElementById('video'),s=document.getElementById('status')
+ try{
+  s.textContent='カメラ準備中...'
+  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920}}})
+  v.srcObject=stream; await v.play()
+  document.getElementById('videoWrap').classList.add('active')
+  document.getElementById('btnRow').style.display='flex'
+  document.getElementById('startBtn').textContent='⏹️ 停止'
+  running=true
+  s.textContent='緑枠に型番を入れて「読み取る」'
+  v.onclick=()=>{try{stream.getVideoTracks()[0].applyConstraints({advanced:[{focusMode:'continuous'}]})}catch(e){}}
+  if(!worker){
+   worker=await Tesseract.createWorker('eng')
+   await worker.loadLanguage('eng')
+   await worker.initialize('eng')
+   await worker.setParameters({tessedit_pageseg_mode:'7',tessedit_char_whitelist:'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.'})
+  }
+ }catch(e){s.textContent='カメラエラー: '+e.message}
 }
 
 async function captureFrame(){
-  if(!running)return; const video=document.getElementById('video'); const canvas=document.getElementById('canvas'); const status=document.getElementById('status');
-  if(!video.videoWidth){status.textContent='準備中...';return;}
-  status.textContent='読み取り中...'; document.getElementById('candidates').innerHTML='';
-  const vw=video.videoWidth, vh=video.videoHeight;
-  const cw=vw*0.82, ch=Math.min(180,vh*0.28), cx=(vw-cw)/2, cy=(vh-ch)/2;
-  const scale=2; canvas.width=cw*scale; canvas.height=ch*scale;
-  const ctx=canvas.getContext('2d'); ctx.drawImage(video,cx,cy,cw,ch,0,canvas.width,canvas.height);
-  const base=ctx.getImageData(0,0,canvas.width,canvas.height);
-  const variants=['normal','high','invert']; const texts=[];
-  for(const v of variants){
-    const img=new ImageData(new Uint8ClampedArray(base.data),base.width,base.height);
-    process(img,v); ctx.putImageData(img,0);
-    const {data:{text}}=await worker.recognize(canvas); texts.push(text);
-  }
-  const candidates=aggregate(texts);
-  if(candidates.length){showCandidates(candidates); status.textContent='候補をタップしてください';}
-  else{status.textContent='見つからず。近づけてライト点灯で再試行';}
+ if(!running)return
+ const v=document.getElementById('video'),c=document.getElementById('canvas'),s=document.getElementById('status'),d=document.getElementById('debug')
+ const vw=v.videoWidth,vh=v.videoHeight
+ if(!vw){s.textContent='映像準備中';return}
+ const cw=vw*0.84,ch=Math.min(200,vh*0.3),cx=(vw-cw)/2,cy=(vh-ch)/2
+ const scale=2.5; c.width=cw*scale; c.height=ch*scale
+ const ctx=c.getContext('2d'); ctx.drawImage(v,cx,cy,cw,ch,0,0,c.width,c.height)
+ // 前処理
+ const img=ctx.getImageData(0,0,c.width,c.height),data=img.data
+ for(let i=0;i<data.length;i+=4){
+  const g=data[i]*0.3+data[i+1]*0.59+data[i+2]*0.11
+  const v=g>140?255:0
+  data[i]=data[i+1]=data[i+2]=v
+ }
+ ctx.putImageData(img,0,0)
+ s.textContent='認識中...'
+ try{
+  const res=await worker.recognize(c)
+  const text=res.data.text
+  d.textContent='生テキスト:\n'+text
+  const cands=text.split('\n').map(t=>t.trim().toUpperCase().replace(/[^A-Z0-9\-\.]/g,'')).filter(t=>t.length>=4&&/[A-Z0-9]/.test(t))
+  const uniq=[...new Set(cands)].slice(0,5)
+  showCands(uniq)
+  s.textContent=uniq.length? '候補をタップ':'文字なし。近づいて💡点灯'
+ }catch(e){s.textContent='OCR失敗: '+e.message}
 }
 
-function process(img,mode){
-  const d=img.data;
-  for(let i=0;i<d.length;i+=4){
-    let g=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];
-    if(mode==='high') g=Math.min(255,(g-128)*1.8+128);
-    let th=mode==='invert'?150:135;
-    let v=g>th?255:0; if(mode==='invert') v=255-v;
-    d[i]=d[i+1]=d[i+2]=v;
-  }
+function showCands(list){
+ const w=document.getElementById('candidates'); w.innerHTML=''
+ list.forEach(t=>{const el=document.createElement('div');el.className='candidate';el.textContent=t;el.onclick=()=>{document.querySelectorAll('.candidate').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');document.getElementById('modelInput').value=t};w.appendChild(el)})
 }
 
-function aggregate(texts){
-  const map=new Map();
-  texts.forEach(t=>{t.split('\n').map(s=>s.trim().toUpperCase()).filter(s=>s.length>=4).forEach(s=>{
-    const clean=s.replace(/[^A-Z0-9\-\.]/g,''); if(!/[A-Z0-9]/.test(clean))return;
-    let score=0; if(/[0-9]/.test(clean))score+=2; if(/[A-Z]/.test(clean))score+=2; if(/-/.test(clean))score+=3; if(/^[A-Z0-9\-\.]{5,25}$/.test(clean))score+=3; if(/[A-Z].*[0-9]/.test(clean))score+=2;
-    if(score>=5){map.set(clean,(map.get(clean)||0)+score);}
-  });});
-  return Array.from(map.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5).map(e=>e[0]);
-}
-
-function showCandidates(list){
-  const wrap=document.getElementById('candidates'); wrap.innerHTML='<div class="candidate-title">読み取り候補:</div>';
-  list.forEach(txt=>{const d=document.createElement('div');d.className='candidate';d.textContent=txt;d.onclick=()=>{document.querySelectorAll('.candidate').forEach(c=>c.classList.remove('selected'));d.classList.add('selected');document.getElementById('modelInput').value=txt;document.getElementById('status').textContent='選択: '+txt;};wrap.appendChild(d);});
+function toggleTorch(){
+ if(!stream)return
+ const track=stream.getVideoTracks()[0],cap=track.getCapabilities()
+ if(!cap.torch){alert('ライト非対応機種');return}
+ torchOn=!torchOn; track.applyConstraints({advanced:[{torch:torchOn}]})
 }
 
 function stopCamera(){
-  running=false; if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
-  document.getElementById('videoWrap').classList.remove('active'); document.getElementById('btnRow').style.display='none';
-  document.getElementById('lensBtn').textContent='📷 カメラ起動'; document.getElementById('ocrBtn').textContent='📸 OCRモード';
-  document.getElementById('status').textContent=''; torchOn=false;
+ running=false; if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+ document.getElementById('videoWrap').classList.remove('active');document.getElementById('btnRow').style.display='none';document.getElementById('startBtn').textContent='📸 カメラ起動'
 }
 
-function search(){
-  const val=document.getElementById('modelInput').value.trim(); if(!val)return alert('型番を選択してください');
-  stopCamera(); const manual=document.getElementById('manualChk').checked; const spec=document.getElementById('specChk').checked;
-  let opt=''; if(manual&&spec)opt='("仕様書" OR "取扱説明書")'; else if(manual)opt='"取扱説明書"'; else if(spec)opt='"仕様書"';
-  const q=val.replace(/[^\w\-\.]/g,'')+(opt?' '+opt:''); location.href='https://www.google.com/search?q='+encodeURIComponent(q);
+function doSearch(){
+ const v=document.getElementById('modelInput').value.trim(); if(!v)return alert('型番選んで')
+ stopCamera()
+ const m=document.getElementById('manualChk').checked,s=document.getElementById('specChk').checked
+ let opt=''; if(m&&s)opt='("仕様書" OR "取扱説明書")'; else if(m)opt='"取扱説明書"'; else if(s)opt='"仕様書"'
+ location.href='https://www.google.com/search?q='+encodeURIComponent(v+' '+opt)
 }
-
-const isAndroid=navigator.userAgent.toLowerCase().includes('android');
-if(isAndroid&&navigator.clipboard){setInterval(async()=>{try{const t=await navigator.clipboard.readText();if(t&&t.length>3&&t!==lastClipboard){lastClipboard=t;document.getElementById('modelInput').value=t;}}catch(e){}},2000);}
-window.addEventListener('pagehide',stopCamera);
+window.addEventListener('pagehide',stopCamera)
 </script>
 </body>
 </html>
