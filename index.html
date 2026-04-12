@@ -94,8 +94,8 @@ canvas{display:none;}
 
 <h2>型番検索</h2>
 
-<button class="btn lens" onclick="openLens()">📷 レンズ</button>
-<button class="btn ocr" id="ocrBtn" onclick="toggleOCR()">📸 OCRスキャン</button>
+<button class="btn lens" id="lensBtn" onclick="startCamera()">📷 レンズ</button>
+<button class="btn ocr" id="ocrBtn" onclick="startCamera(true)">📸 OCRスキャン</button>
 
 <div class="status" id="status"></div>
 
@@ -127,35 +127,24 @@ let running = false;
 let worker = null;
 let clipboardTimer = null;
 let lastClipboard = "";
+let useOCR = false;
 
-/* レンズ：iOS/Android両対応 */
-function openLens(){
-  if(isAndroid){
-    location.href = "intent://lens/#Intent;scheme=googlechrome;package=com.android.chrome;S.browser_fallback_url=https://lens.google.com/;end";
+/* カメラ起動：レンズもOCRもここに統一 */
+async function startCamera(enableOCR = false){
+  if(running){
+    stopCamera();
     return;
   }
-  
-  // iOS/PCはUniversal Link。アプリあれば自動で開く
-  location.href = "https://lens.google.com/";
-}
 
-/* OCRトグル */
-async function toggleOCR(){
-  if(running){
-    stopOCR();
-  } else {
-    await startOCR();
-  }
-}
-
-/* OCR開始 */
-async function startOCR(){
+  useOCR = enableOCR;
   const video = document.getElementById("video");
-  const btn = document.getElementById("ocrBtn");
+  const lensBtn = document.getElementById("lensBtn");
+  const ocrBtn = document.getElementById("ocrBtn");
   const status = document.getElementById("status");
   
   try{
-    btn.disabled = true;
+    lensBtn.disabled = true;
+    ocrBtn.disabled = true;
     status.textContent = "カメラ起動中...";
     
     stream = await navigator.mediaDevices.getUserMedia({
@@ -166,33 +155,39 @@ async function startOCR(){
     
     await video.play();
     
-    // Tesseract worker初期化
-    status.textContent = "OCR準備中...";
-    worker = await Tesseract.createWorker("eng");
-    
     running = true;
-    btn.textContent = "⏹️ スキャン停止";
-    btn.disabled = false;
-    status.textContent = "スキャン中...";
+    lensBtn.textContent = "⏹️ カメラ停止";
+    ocrBtn.textContent = "⏹️ カメラ停止";
+    lensBtn.disabled = false;
+    ocrBtn.disabled = false;
     
-    scanLoop();
+    if(useOCR){
+      status.textContent = "OCR準備中...";
+      worker = await Tesseract.createWorker("eng");
+      status.textContent = "型番をスキャン中...";
+      scanLoop();
+    } else {
+      status.textContent = "型番をカメラに映してください";
+    }
+    
   } catch(e){
     status.textContent = "カメラ起動失敗: " + e.message;
-    btn.disabled = false;
-    stopOCR();
+    lensBtn.textContent = "📷 レンズ";
+    ocrBtn.textContent = "📸 OCRスキャン";
+    lensBtn.disabled = false;
+    ocrBtn.disabled = false;
+    stopCamera();
   }
 }
 
-/* スキャンループ */
+/* スキャンループ：OCR有効時のみ */
 async function scanLoop(){
-  if(!running || !worker) return;
+  if(!running || !worker || !useOCR) return;
 
   const video = document.getElementById("video");
   const canvas = document.getElementById("canvas");
   const ctx = canvas.getContext("2d");
-  const status = document.getElementById("status");
 
-  // videoサイズが0の時はスキップ
   if(!video.videoWidth || !video.videoHeight){
     setTimeout(scanLoop, 500);
     return;
@@ -208,8 +203,8 @@ async function scanLoop(){
 
     if(model){
       document.getElementById("modelInput").value = model;
-      status.textContent = `検出: ${model}`;
-      stopOCR();
+      document.getElementById("status").textContent = `検出: ${model}`;
+      stopCamera();
       setTimeout(() => runSearch(model), 500);
       return;
     }
@@ -221,7 +216,7 @@ async function scanLoop(){
 }
 
 /* 停止 */
-function stopOCR(){
+function stopCamera(){
   running = false;
   
   if(stream){
@@ -238,11 +233,12 @@ function stopOCR(){
   video.classList.remove("active");
   video.srcObject = null;
   
-  const btn = document.getElementById("ocrBtn");
-  btn.textContent = "📸 OCRスキャン";
-  btn.disabled = false;
-  
+  document.getElementById("lensBtn").textContent = "📷 レンズ";
+  document.getElementById("ocrBtn").textContent = "📸 OCRスキャン";
+  document.getElementById("lensBtn").disabled = false;
+  document.getElementById("ocrBtn").disabled = false;
   document.getElementById("status").textContent = "";
+  useOCR = false;
 }
 
 /* 型番抽出 */
@@ -263,4 +259,56 @@ function extractModel(text){
       if(t.length >= 6) score += 2;
       if(/^[A-Z0-9\-]+$/.test(t)) score += 3;
 
-     
+      if(score > bestScore){
+        bestScore = score;
+        best = t;
+      }
+    }
+  }
+  return bestScore >= 6 ? best : "";
+}
+
+/* 検索 */
+function search(){
+  const val = document.getElementById("modelInput").value.trim();
+  if(!val) return alert("型番を入力してください");
+  runSearch(val);
+}
+
+function runSearch(keyword){
+  stopCamera();
+  
+  const manual = document.getElementById("manualChk").checked;
+  const spec = document.getElementById("specChk").checked;
+
+  let opt = "";
+  if(manual && spec) opt = '("仕様書" OR "取扱説明書")';
+  else if(manual) opt = '"取扱説明書"';
+  else if(spec) opt = '"仕様書"';
+
+  const clean = keyword.replace(/[^\w\-\.]/g, "");
+  const query = clean + (opt ? " " + opt : "");
+  
+  location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+}
+
+/* Android自動貼り付け */
+if(isAndroid && navigator.clipboard){
+  clipboardTimer = setInterval(async () => {
+    try{
+      const t = await navigator.clipboard.readText();
+      if(t && t.length > 3 && t !== lastClipboard){
+        lastClipboard = t;
+        document.getElementById("modelInput").value = t;
+      }
+    }catch(e){}
+  }, 2000);
+}
+
+/* ページ離脱時にカメラ停止 */
+window.addEventListener("beforeunload", stopCamera);
+window.addEventListener("pagehide", stopCamera);
+</script>
+
+</body>
+</html>
